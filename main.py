@@ -4,7 +4,7 @@ from utils.channel_parser import ChannelParser
 channels_to_parse = ['vietnamnews_ru']
 
 for channel in channels_to_parse:
-    parser = ChannelParser(channel, '2025-04-10 00:00:00', None)
+    parser = ChannelParser(channel, '2025-04-12 00:00:00', None)
     parser.scrape()
 
     path_to_save = os.path.abspath(f'./data/{channel}.json')

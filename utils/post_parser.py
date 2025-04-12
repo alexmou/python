@@ -2,7 +2,7 @@ from selenium import webdriver
 from dateutil.parser import parse
 from selenium.webdriver.common.by import By
 
-
+from datetime import datetime
 class Post (object):
     """
     Provides methods to parse post elements
@@ -22,8 +22,23 @@ class Post (object):
         :return: Dictionary that includes datetime element
         """
         date_element = self.post_web_element.find_element(By.CLASS_NAME, "time")
-        date = parse(date_element.text)
-        return {"datetime": date}
+        date_string = date_element.get_attribute("datetime")  # Get HTML attribute
+
+        if date_string:
+            try:
+                date = parse(date_string)
+                return {"datetime": date}
+            except:
+                print(f"Warning: Could not parse datetime attribute: '{date_string}'")
+
+        # Fallback to text content if attribute parsing fails
+        date_text = date_element.text.strip()
+        try:
+            date = parse(date_text)
+            return {"datetime": date}
+        except:
+            print(f"Warning: Could not parse date string: '{date_text}'")
+            return {"datetime": None}
 
     def is_reply(self):
         """
