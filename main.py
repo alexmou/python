@@ -15,7 +15,7 @@ def main():
     args = parser.parse_args()
 
     for channel in args.channels:
-        print(f"\nParsing channel: {channel}")
+        #print(f"\nParsing channel: {channel}")
         parser = ChannelParser(
             channel_name=channel,
             start_date=args.start_date,
