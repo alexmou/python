@@ -39,8 +39,14 @@ class ChannelParser:
         self.scraping_result: List[Dict[str, Any]] = []
 
     def _parse_and_localize_date(self, date_str: str) -> datetime:
-        """Parse and localize date string"""
-        return self.timezone.localize(parse(date_str))
+            """Parse and localize date string"""
+            if not date_str:
+                raise ValueError("Date string cannot be empty")
+
+            parsed_date = parse(date_str)
+            if not parsed_date.tzinfo:
+                return self.timezone.localize(parsed_date)
+            return parsed_date
 
     def _init_driver(self) -> webdriver.Chrome:
         """Initialize and configure Chrome WebDriver"""
@@ -108,31 +114,36 @@ class ChannelParser:
                 break
 
     def _filter_elements(self, elements: List[Any]) -> List[Any]:
-        """Filters posts by date range."""
-        start_msg_idx = None
+            """Filters posts by date range."""
+            filtered_elements = []
 
-        for i, element in enumerate(elements):
-            message = Post(element)
-            if self.start_date <= message.get_date()["datetime"]:
-                start_msg_idx = i
-                break
+            for element in elements:
+                try:
+                    message = Post(element)
+                    post_date = message.get_date().get("datetime")
 
-        if start_msg_idx is None:
-            return []
+                    if post_date is None:
+                        continue
 
-        if self.finish_date is None:
-            return elements[start_msg_idx:]
+                    # Приводим обе даты к одному часовому поясу для корректного сравнения
+                    post_date = post_date.astimezone(self.timezone)
+                    start_date = self.start_date.astimezone(self.timezone)
 
-        fin_msg_idx = None
-        elements_half_filtered = elements[start_msg_idx:]
+                    if post_date >= start_date:
+                        if self.finish_date is None:
+                            filtered_elements.append(element)
+                        else:
+                            finish_date = self.finish_date.astimezone(self.timezone)
+                            if post_date <= finish_date:
+                                filtered_elements.append(element)
 
-        for i, element in enumerate(reversed(elements_half_filtered)):
-            message = Post(element)
-            if self.finish_date >= message.get_date()['datetime'].astimezone(self.timezone):
-                fin_msg_idx = i
-                break
+                except Exception as e:
+                    print(f"Error filtering element: {str(e)}")
+                    continue
 
-        return elements_half_filtered[:len(elements_half_filtered)-fin_msg_idx] if fin_msg_idx is not None else []
+            return filtered_elements
+
+
 
     def _parse_posts(self, posts_elements: List[Any]) -> List[Dict[str, Any]]:
         """Parse filtered posts into structured data"""
@@ -162,12 +173,25 @@ class ChannelParser:
         """
         Saves scraping result to JSON file.
         :param path: Absolute file path
-        :return: Save status message
+        :return: JSON string or error message
         """
         try:
-          #  with open(path, "w", encoding='utf-8') as outfile:
-           #     json.dump(self.scraping_result, outfile, default=str, ensure_ascii=False, indent=4)
-            print(self.scraping_result)
-            return "Saved successfully."
+            def datetime_serializer(obj):
+                if isinstance(obj, datetime):
+                    return obj.isoformat()
+                raise TypeError(f"Type {type(obj)} not serializable")
+
+            # Преобразуем в JSON строку
+            json_str = json.dumps(self.scraping_result,
+                                  default=datetime_serializer,
+                                  ensure_ascii=False,
+                                  indent=4)
+
+            # Сохраняем в файл (если нужно)
+           # with open(path, "w", encoding='utf-8') as outfile:
+           #     outfile.write(json_str)
+
+            return json_str  # Возвращаем JSON строку для вывода
+
         except Exception as e:
             return f"Error saving file: {str(e)}"

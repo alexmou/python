@@ -16,28 +16,21 @@ class Post (object):
         self.post_web_element = post_web_element
 
     def get_date(self):
-        """
-        Extracts the date from web element object.
+        try:
+            date_element = self.post_web_element.find_element(By.CLASS_NAME, "time")
+            date_string = date_element.get_attribute("datetime")
+           # print(f"Raw date string: {date_string}")  # Отладочная печать
 
-        :return: Dictionary that includes datetime element
-        """
-        date_element = self.post_web_element.find_element(By.CLASS_NAME, "time")
-        date_string = date_element.get_attribute("datetime")  # Get HTML attribute
-
-        if date_string:
-            try:
+            if date_string:
                 date = parse(date_string)
                 return {"datetime": date}
-            except:
-                print(f"Warning: Could not parse datetime attribute: '{date_string}'")
 
-        # Fallback to text content if attribute parsing fails
-        date_text = date_element.text.strip()
-        try:
+            date_text = date_element.text.strip()
             date = parse(date_text)
             return {"datetime": date}
-        except:
-            print(f"Warning: Could not parse date string: '{date_text}'")
+
+        except Exception as e:
+            print(f"Error parsing date: {str(e)}")
             return {"datetime": None}
 
     def is_reply(self):
