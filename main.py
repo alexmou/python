@@ -27,8 +27,8 @@ def main():
             os.makedirs('./data', exist_ok=True)
             path_to_save = os.path.abspath(f'./data/{channel}.json')
             result = parser.save_json(path_to_save)
-            print(f"Successfully saved to {path_to_save}")
-            print(result[:500] + "...")  # Печатаем начало JSON для проверки
+            #print(f"Successfully saved to {path_to_save}")
+            print(result)
         except Exception as e:
             print(f"Failed to parse {channel}: {str(e)}")
 
