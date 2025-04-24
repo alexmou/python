@@ -12,7 +12,6 @@ def main():
     # Универсальные пути (работают на Linux/Windows)
     base_dir = os.path.dirname(os.path.abspath(__file__))
     session_dir = os.path.join(base_dir, "cookies")
-    print(session_dir)
     data_dir = os.path.join(base_dir, "data")
     os.makedirs(session_dir, exist_ok=True)
     os.makedirs(data_dir, exist_ok=True)
@@ -27,6 +26,8 @@ def main():
     )
 
     try:
+
+
         result = tg_parser.scrape()
 
         if result:

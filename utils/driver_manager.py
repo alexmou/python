@@ -1,3 +1,5 @@
+import os
+import shutil
 
 # ───────────────────────────────────────────────
 # Module: driver_manager.py
@@ -13,7 +15,20 @@ class TelegramDriverManager:
         self.user_data_dir = user_data_dir
         self.headless = headless
 
+    def _clean_chrome_locks(self):
+        if not self.user_data_dir:
+            return
+        for fname in ["SingletonLock", "lockfile"]:
+            try:
+                os.remove(os.path.join(self.user_data_dir, fname))
+            except FileNotFoundError:
+                continue
+            except Exception as e:
+                print(f"[DEBUG] Не удалось удалить {fname}: {e}")
+
     def build_driver(self):
+        self._clean_chrome_locks()
+
         options = Options()
         if self.headless:
             options.add_argument("--headless=new")
@@ -26,6 +41,7 @@ class TelegramDriverManager:
         options.add_experimental_option("useAutomationExtension", False)
 
         if self.user_data_dir:
+            os.makedirs(self.user_data_dir, exist_ok=True)
             options.add_argument(f"--user-data-dir={self.user_data_dir}")
             options.add_argument("--profile-directory=Default")
 

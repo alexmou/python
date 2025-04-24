@@ -1,6 +1,6 @@
 import os
 import argparse
-from telegram_parser import TelegramPrivateChannelParser
+from utils.telegram_parser import TelegramPrivateChannelParser
 
 def main():
     parser = argparse.ArgumentParser(description="Telegram Private Channel Parser")
