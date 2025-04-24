@@ -1,80 +1,59 @@
-# utils/post_parser.py (refactored)
-
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
 from datetime import datetime
-import time
 import pyperclip
+import time
 from utils.log_config import logger
 
 class Post:
-    def __init__(self, element):
-        self.el = element
+    def __init__(self):
+        pass
 
-    def get_post_id(self):
-        return self.el.get_attribute("data-mid")
-
-    def get_timestamp(self):
+    def get_post_id(self, el):
         try:
-            return int(self.el.get_attribute("data-timestamp"))
+            return el.get_attribute("data-mid")
+        except Exception as e:
+            logger.warning("[stale] get_post_id", exc_info=e)
+            return None
+
+    def get_timestamp(self, el):
+        try:
+            ts = el.get_attribute("data-timestamp")
+            return int(ts) if ts else 0
         except:
             return 0
 
-    def get_text(self):
+    def get_text(self, el):
         try:
-            container = self.el.find_element(By.CSS_SELECTOR, "div.message.spoilers-container")
-            text = container.text.strip()
-            return text
+            container = el.find_element(By.CSS_SELECTOR, "div.message.spoilers-container")
+            return container.text.strip()
         except:
             return ""
 
-    def get_media(self):
+    def get_media(self, el):
         photos = []
         try:
-            for el in self.el.find_elements(By.CLASS_NAME, "media-photo"):
-                src = el.get_attribute("src")
+            for img in el.find_elements(By.CLASS_NAME, "media-photo"):
+                src = img.get_attribute("src")
                 if src:
                     photos.append(src)
         except:
             pass
         return photos
 
-    def get_author_id(self):
+    def get_author_id(self, el):
         try:
-            group = self.el.find_element(By.XPATH, "./ancestor::div[contains(@class, 'bubbles-group')]")
+            group = el.find_element(By.XPATH, "./ancestor::div[contains(@class, 'bubbles-group')]")
             avatar_div = group.find_element(By.CSS_SELECTOR, ".bubbles-group-avatar[data-peer-id]")
             return avatar_div.get_attribute("data-peer-id")
         except:
             return ""
 
-    def get_post_link(self, driver):
-        try:
-            driver.execute_script("document.body.click()")
-            time.sleep(0.3)
-            msg = self.el.find_element(By.CSS_SELECTOR, ".message")
-            driver.execute_script("arguments[0].scrollIntoView(true);", msg)
-            time.sleep(0.3)
-            ActionChains(driver).move_to_element(msg).context_click().perform()
-            WebDriverWait(driver, 180).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, "div.btn-menu-items"))
-            )
-            items = driver.find_elements(By.CSS_SELECTOR, "div.btn-menu-item")
-            for i in items:
-                label = i.find_element(By.CSS_SELECTOR, ".btn-menu-item-text").text.strip()
-                if "Copy Message Link" in label:
-                    i.click()
-                    time.sleep(1)
-                    return pyperclip.paste()
-        except Exception as e:
-            logger.warning("Failed to get post link", exc_info=e)
-        return ""
-
     def get_user_info(self, driver, cache, user_id):
-        cached = cache.get(user_id)
-        if cached:
-            return cached
+        if user_id in cache:
+            return cache[user_id]
 
         profile_url = f"https://web.telegram.org/k/#{user_id}"
         driver.get(profile_url)
@@ -96,21 +75,56 @@ class Post:
         except:
             pass
 
-        result = {
+        info = {
             "user_id": user_id,
             "user_username": username,
             "user_photo": avatar
         }
-        cache.set(user_id, result)
-        return result
+        cache[user_id] = info
+        return info
 
-    def to_dict(self, driver, url, cache):
-        post_id = self.get_post_id()
-        timestamp = self.get_timestamp()
-        text = self.get_text()
-        media = self.get_media()
-        post_link = self.get_post_link(driver)
-        author_id = self.get_author_id()
+    def get_post_link(self, el, driver) -> str:
+        try:
+            driver.execute_script("document.body.click()")  # сброс фокуса
+            time.sleep(0.3)
+
+            # Находим, куда кликать правой кнопкой
+            try:
+                msg = el.find_element(By.CSS_SELECTOR, ".message")
+            except:
+                msg = el.find_element(By.CSS_SELECTOR, ".bubble-content")
+
+            driver.execute_script("arguments[0].scrollIntoView(true);", msg)
+            time.sleep(0.3)
+            ActionChains(driver).move_to_element(msg).context_click().perform()
+
+            # Увеличенный таймаут + лог
+            WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "div.btn-menu-items"))
+            )
+
+            for item in driver.find_elements(By.CSS_SELECTOR, "div.btn-menu-item"):
+                try:
+                    label = item.find_element(By.CSS_SELECTOR, ".btn-menu-item-text").text.strip()
+                    if "Copy Message Link" in label:
+                        item.click()
+                        time.sleep(1)
+                        return pyperclip.paste()
+                except:
+                    continue
+
+        except Exception as e:
+                print("[DEBUG] Failed to get post link:", e)
+        return ""
+
+
+    def to_dict(self, el, driver, url, cache):
+        post_id = self.get_post_id(el)
+        timestamp = self.get_timestamp(el)
+        text = self.get_text(el)
+        media = self.get_media(el)
+        post_link = self.get_post_link(el, driver)
+        author_id = self.get_author_id(el)
         user_info = self.get_user_info(driver, cache, author_id) if author_id else {}
 
         return {
