@@ -2,8 +2,6 @@ import os
 import json
 import time
 from datetime import datetime
-
-import pyperclip
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -61,39 +59,34 @@ class TelegramPrivateChannelParser:
 
     def get_post_link(self, el) -> str:
         try:
-            self.driver.execute_script("document.body.click()")  # Сброс фокуса
+            self.driver.execute_script("document.body.click()")
             time.sleep(0.3)
 
-            # Поиск элемента сообщения
             try:
                 msg = el.find_element(By.CSS_SELECTOR, ".message")
             except NoSuchElementException:
                 msg = el.find_element(By.CSS_SELECTOR, ".bubble-content")
 
-            # Прокрутка к элементу
             self.driver.execute_script("arguments[0].scrollIntoView(true);", msg)
-            time.sleep(0.5)
-
-            # Вызов контекстного меню
+            time.sleep(0.4)
             ActionChains(self.driver).move_to_element(msg).context_click().perform()
 
-            # Ожидание появления меню
-            WebDriverWait(self.driver, 10).until(
+            WebDriverWait(self.driver, 6).until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, "div.btn-menu-items"))
             )
 
-            # Поиск и клик по пункту меню
             for item in self.driver.find_elements(By.CSS_SELECTOR, "div.btn-menu-item"):
                 try:
                     label = item.find_element(By.CSS_SELECTOR, ".btn-menu-item-text").text.strip()
                     if "Copy Message Link" in label:
                         item.click()
                         time.sleep(1)
+                        import pyperclip
                         return pyperclip.paste()
                 except Exception:
                     continue
 
-        except Exception as e:
+        except (StaleElementReferenceException, NoSuchElementException, TimeoutException) as e:
             logger.warning("[get_post_link] menu fail", exc_info=e)
             self.driver.save_screenshot(f"./debug_link_error_{int(time.time())}.png")
 
@@ -146,22 +139,28 @@ class TelegramPrivateChannelParser:
 
         return self.result
 
-    def _scroll_page(self):
-        last_height = -1
-        same_count = 0
-        max_retries = 30
+    def _scroll_page(self, pause: float = 1.0, max_pulls: int = 50):
+        """
+        Скроллит вниз до тех пор, пока лента сообщений подгружается,
+        или пока не превысит max_pulls попыток.
+        """
+        prev_count = 0
 
-        for _ in range(max_retries):
-            self.driver.execute_script("window.scrollTo(0, 0);")
-            time.sleep(3)
-            current_height = self.driver.execute_script("return document.body.scrollHeight")
-            if current_height == last_height:
-                same_count += 1
+        for _ in range(max_pulls):
+            # 1) Собираем текущие посты
+            posts = self.driver.find_elements(By.CLASS_NAME, "bubble")
+            current_count = len(posts)
+
+            # 2) Если появились новые посты — обновляем счётчик и скроллим вниз
+            if current_count > prev_count:
+                prev_count = current_count
+                # скроллим к последнему посту в списке
+                last_post = posts[-1]
+                self.driver.execute_script("arguments[0].scrollIntoView(true);", last_post)
+                time.sleep(pause)
             else:
-                same_count = 0
-            if same_count >= 5:
+                # новых постов не появилось — выходим
                 break
-            last_height = current_height
 
     def save(self, filepath: str):
         with open(filepath, "w", encoding="utf-8") as f:
