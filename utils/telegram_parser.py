@@ -2,6 +2,8 @@ import os
 import json
 import time
 from datetime import datetime
+
+import pyperclip
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -59,41 +61,39 @@ class TelegramPrivateChannelParser:
 
     def get_post_link(self, el) -> str:
         try:
-            self.driver.execute_script("document.body.click()")
+            self.driver.execute_script("document.body.click()")  # Сброс фокуса
             time.sleep(0.3)
 
+            # Поиск элемента сообщения
             try:
                 msg = el.find_element(By.CSS_SELECTOR, ".message")
             except NoSuchElementException:
                 msg = el.find_element(By.CSS_SELECTOR, ".bubble-content")
 
+            # Прокрутка к элементу
             self.driver.execute_script("arguments[0].scrollIntoView(true);", msg)
-            time.sleep(0.4)
+            time.sleep(0.5)
 
-            try:
-                ActionChains(self.driver).move_to_element(msg).context_click().perform()
-                WebDriverWait(self.driver, 10).until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, "div.btn-menu-items"))
-                )
-            except TimeoutException:
-                logger.debug("[RETRY] Menu not found, second context click")
-                ActionChains(self.driver).move_to_element(msg).context_click().perform()
-                WebDriverWait(self.driver, 10).until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, "div.btn-menu-items"))
-                )
+            # Вызов контекстного меню
+            ActionChains(self.driver).move_to_element(msg).context_click().perform()
 
+            # Ожидание появления меню
+            WebDriverWait(self.driver, 10).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "div.btn-menu-items"))
+            )
+
+            # Поиск и клик по пункту меню
             for item in self.driver.find_elements(By.CSS_SELECTOR, "div.btn-menu-item"):
                 try:
                     label = item.find_element(By.CSS_SELECTOR, ".btn-menu-item-text").text.strip()
                     if "Copy Message Link" in label:
                         item.click()
                         time.sleep(1)
-                        import pyperclip
                         return pyperclip.paste()
                 except Exception:
                     continue
 
-        except (StaleElementReferenceException, NoSuchElementException, TimeoutException) as e:
+        except Exception as e:
             logger.warning("[get_post_link] menu fail", exc_info=e)
             self.driver.save_screenshot(f"./debug_link_error_{int(time.time())}.png")
 
