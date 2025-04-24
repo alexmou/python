@@ -1,5 +1,5 @@
 import os
-import shutil
+import glob
 
 # ───────────────────────────────────────────────
 # Module: driver_manager.py
@@ -18,13 +18,15 @@ class TelegramDriverManager:
     def _clean_chrome_locks(self):
         if not self.user_data_dir:
             return
-        for fname in ["SingletonLock", "lockfile"]:
-            try:
-                os.remove(os.path.join(self.user_data_dir, fname))
-            except FileNotFoundError:
-                continue
-            except Exception as e:
-                print(f"[DEBUG] Не удалось удалить {fname}: {e}")
+
+        patterns = ["SingletonLock", "lockfile", "*.tmp", "*.log"]
+        for pattern in patterns:
+            for path in glob.glob(os.path.join(self.user_data_dir, pattern)):
+                try:
+                    os.remove(path)
+                    print(f"[DEBUG] Удалён: {path}")
+                except Exception as e:
+                    print(f"[DEBUG] Не удалось удалить {path}: {e}")
 
     def build_driver(self):
         self._clean_chrome_locks()
