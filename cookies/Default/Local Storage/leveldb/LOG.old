@@ -1,3 +1,5 @@
-2025/04/24-15:36:43.369 3ad8 Reusing MANIFEST C:\Users\User\IdeaProjects\python\cookies\Default\Local Storage\leveldb/MANIFEST-000001
-2025/04/24-15:36:43.384 3ad8 Recovering log #25
-2025/04/24-15:36:43.388 3ad8 Reusing old log C:\Users\User\IdeaProjects\python\cookies\Default\Local Storage\leveldb/000025.log 
+2025/04/27-12:50:24.658 31d0 Reusing MANIFEST C:\Users\User\IdeaProjects\python\cookies\Default\Local Storage\leveldb/MANIFEST-000001
+2025/04/27-12:50:24.672 31d0 Recovering log #29
+2025/04/27-12:50:24.676 31d0 Reusing old log C:\Users\User\IdeaProjects\python\cookies\Default\Local Storage\leveldb/000029.log 
+2025/04/27-12:50:55.287 4190 Level-0 table #33: started
+2025/04/27-12:50:55.298 4190 Level-0 table #33: 30853 bytes OK

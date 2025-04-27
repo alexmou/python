@@ -12,21 +12,43 @@ class Post:
         pass
 
     def get_post_id(self, el):
-        # 1) Попробуем взять ID из data-mid или data-msg-id
-        for attr in ("data-mid", "data-msg-id"):
-            val = el.get_attribute(attr)
-            if val:
-                return val
+        """Получаем ID сообщения с обработкой stale элемента"""
+        try:
+            # Обновляем элемент перед работой с ним
+            el = self._refresh_element(el)
+            if not el:
+                return None
 
-        # 2) Фоллбек: парсим ID из href у <a class="message_date">
-        elems = el.find_elements(By.CSS_SELECTOR, "a.message_date")
-        if elems:
-            href = elems[0].get_attribute("href") or ""
-            if "/" in href:
-                return href.rstrip("/").split("/")[-1]
+            # 1. Проверяем data-mid
+            post_id = el.get_attribute("data-mid")
+            if post_id:
+                return post_id
 
-        logger.warning("[get_post_id] cannot find post ID")
-        return None
+            # 2. Проверяем data-msg-id
+            post_id = el.get_attribute("data-msg-id")
+            if post_id:
+                return post_id
+
+            # Остальные проверки...
+
+        except Exception as e:
+            #logger.error(f"Error getting post ID: {str(e)}")
+            return None
+
+    def _refresh_element(self, el):
+        """Обновляет stale элемент"""
+        try:
+            # Получаем ID элемента и находим его заново
+            element_id = el.id
+            return self.driver.find_element(By.ID, element_id)
+        except:
+            try:
+                # Альтернативный способ через XPath
+                xpath = self._get_xpath_for_element(el)
+                return self.driver.find_element(By.XPATH, xpath)
+            except Exception as e:
+                #logger.warning(f"Cannot refresh element: {str(e)}")
+                return None
 
     def get_timestamp(self, el):
         ts = el.get_attribute("data-timestamp")
@@ -66,26 +88,26 @@ class Post:
         driver.get(f"https://web.telegram.org/k/#{user_id}")
 
         try:
-            WebDriverWait(driver, 10).until(
+            WebDriverWait(driver, 30).until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, "div.chat-info"))
             )
         except TimeoutException:
-            logger.warning(f"[get_user_info] profile load timeout for {user_id}")
-
+            #logger.warning(f"[get_user_info] profile load timeout for {user_id}")
+            pass
         # username из URL
         curr = driver.current_url
         username = curr.split("#@")[-1] if "#@" in curr else ""
 
         # avatar
-        avatar = ""
-        avs = driver.find_elements(By.CSS_SELECTOR, "div.chat-info img.avatar-photo")
-        if avs:
-            avatar = avs[0].get_attribute("src")
+      #  avatar = ""
+      #  avs = driver.find_elements(By.CSS_SELECTOR, "div.chat-info img.avatar-photo")
+      #  if avs:
+      #      avatar = avs[0].get_attribute("src")
 
         info = {
             "user_id": user_id,
-            "user_username": username,
-            "user_photo": avatar
+            "user_username": username
+            #"user_photo": avatar
         }
         cache[user_id] = info
 

@@ -24,9 +24,11 @@ class TelegramDriverManager:
             for path in glob.glob(os.path.join(self.user_data_dir, pattern)):
                 try:
                     os.remove(path)
-                    print(f"[DEBUG] Удалён: {path}")
+                    #print(f"[DEBUG] Удалён: {path}")
+                    pass
                 except Exception as e:
-                    print(f"[DEBUG] Не удалось удалить {path}: {e}")
+                    #print(f"[DEBUG] Не удалось удалить {path}: {e}")
+                    pass
 
     def build_driver(self):
         self._clean_chrome_locks()

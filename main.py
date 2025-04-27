@@ -1,8 +1,10 @@
 import os
+import json
 import argparse
 from utils.telegram_parser import TelegramPrivateChannelParser
 
 def main():
+
     parser = argparse.ArgumentParser(description="Telegram Private Channel Parser")
     parser.add_argument("channel", help="Название канала (без @)")
     args = parser.parse_args()
@@ -25,19 +27,40 @@ def main():
         timestamp_file=timestamp_file
     )
 
+
     try:
-
-
         result = tg_parser.scrape()
+
+        response = {
+            "success": True,
+            "error": None
+        }
 
         if result:
             tg_parser.save(output_file)
-            print(f"✅ Сохранено: {output_file}")
-            print(f"🔍 Найдено сообщений: {len(result)}")
+            response.update({
+                "found_messages": True,
+                "file_path": output_file,
+                "message_count": len(result),
+                "status": f"Найдено {len(result)} сообщений"
+            })
         else:
-            print("⚠️ Сообщения не найдены или произошла ошибка.")
+            response.update({
+                "found_messages": False,
+                "status": "Сообщения не найдены"
+            })
+
+        print(json.dumps(response, ensure_ascii=False, indent=2))
+
     except Exception as e:
-        print(f"🔥 Критическая ошибка: {str(e)}")
+        error_response = {
+            "success": False,
+            "found_messages": False,
+            "error": str(e),
+            "status": "Произошла ошибка"
+        }
+        print(json.dumps(error_response, ensure_ascii=False, indent=2))
+
     finally:
         tg_parser.close()
 
