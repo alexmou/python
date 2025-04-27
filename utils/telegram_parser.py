@@ -198,5 +198,6 @@ class TelegramPrivateChannelParser:
     def close(self):
         self.driver.quit()
         if hasattr(self.driver_manager, "cleanup"):
-            self.driver_manager.cleanup()
+             self.driver_manager.cleanup()
+
 
