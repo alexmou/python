@@ -96,7 +96,7 @@ class TelegramPrivateChannelParser:
 
     def scrape(self):
         self.driver.get(self.url)
-
+        self.driver.save_screenshot(f"debug_link_error_{int(time.time())}.png")
         for _ in range(3):
             try:
                 WebDriverWait(self.driver, 30).until(
