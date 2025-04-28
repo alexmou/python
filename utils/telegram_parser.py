@@ -118,7 +118,7 @@ class TelegramPrivateChannelParser:
         self.check_authorization_or_capture_qr()
         # Ждем полной загрузки интерфейса Telegram
         try:
-            WebDriverWait(self.driver, 10).until(
+            WebDriverWait(self.driver, 30).until(
                 EC.presence_of_element_located((By.CLASS_NAME, "tg_head"))
             )
 
