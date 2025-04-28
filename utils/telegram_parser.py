@@ -98,17 +98,30 @@ class TelegramPrivateChannelParser:
             pass
         return ""
 
+    def check_authorization_or_capture_qr(self):
+        """Проверяет, авторизован ли пользователь. Если нет, сохраняет скриншот QR-кода и завершает выполнение."""
+        try:
+            WebDriverWait(self.driver, 10).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "div.tg_head"))
+            )
+            print("[INFO] Пользователь авторизован.")
+        except TimeoutException:
+            # Если шапка не найдена — скорее всего страница авторизации
+            filename = f"/home/l_murygin/p8/qr_code.png"
+            self.driver.save_screenshot(filename)
+            print(f"[WARNING] Пользователь НЕ авторизован! QR-код сохранён в файл: {filename}")
+            self.close()
+            exit(1)
+
     def scrape(self):
         self.driver.get(self.url)
-
+        self.check_authorization_or_capture_qr()
         # Ждем полной загрузки интерфейса Telegram
         try:
-            WebDriverWait(self.driver, 300).until(
+            WebDriverWait(self.driver, 10).until(
                 EC.presence_of_element_located((By.CLASS_NAME, "tg_head"))
             )
 
-            filename = f"/home/l_murygin/p8/qr.png"
-            self.driver.save_screenshot(filename)
 
         except TimeoutException:
             print("[WARN] Telegram UI не загрузился")
