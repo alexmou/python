@@ -89,7 +89,7 @@ class TelegramPrivateChannelParser:
 
         except (StaleElementReferenceException, NoSuchElementException, TimeoutException) as e:
             #logger.warning("[get_post_link] menu fail", exc_info=e)
-            #self.driver.save_screenshot(f"./debug_link_error_{int(time.time())}.png")
+            self.driver.save_screenshot(f"/debug_link_error_{int(time.time())}.png")
             pass
         return ""
 
@@ -100,6 +100,8 @@ class TelegramPrivateChannelParser:
             try:
                 WebDriverWait(self.driver, 30).until(
                     EC.presence_of_element_located((By.CLASS_NAME, "bubbles-group"))
+                    #logger.warning("[get_post_link] menu fail", exc_info=e)
+                    #self.driver.save_screenshot(f"./debug_link_error_{int(time.time())}.png")
                 )
                 break
             except:
