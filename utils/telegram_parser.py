@@ -110,9 +110,9 @@ class TelegramPrivateChannelParser:
         self._scroll_page()
 
         posts = self.driver.find_elements(By.CLASS_NAME, "bubble")
-        #logger.info(f"[INFO] Найдено {len(posts)} до филльтрации")
+        print(f"[INFO] Найдено {len(posts)} до филльтрации")
         filtered = self._filter_elements(posts)
-        #logger.info(f"[INFO] Найдено {len(filtered)} новых постов")
+        print(f"[INFO] Найдено {len(filtered)} новых постов")
 
         post_handler = Post()
         latest_ts = 0
@@ -123,18 +123,18 @@ class TelegramPrivateChannelParser:
                 time.sleep(0.4)
 
                 link = self.get_post_link(el)
-                #logger.debug(f"[DEBUG] link: {link}")
+                print(f"[DEBUG] link: {link}")
                 data = post_handler.to_dict(el, self.driver, self.url, self.user_cache)
                 data["message_link"] = link
 
-                #logger.debug(f"[POST] ID: {data.get('post_id')}, TS: {data.get('timestamp')}, LINK: {data['message_link']}")
+                print(f"[POST] ID: {data.get('post_id')}, TS: {data.get('timestamp')}, LINK: {data['message_link']}")
 
                 if data["timestamp"] > latest_ts:
                     latest_ts = data["timestamp"]
                 self.result.append(data)
                 time.sleep(1.0)
             except Exception as e:
-                #logger.warning("[WARN] Ошибка при обработке поста", exc_info=e)
+                print("[WARN] Ошибка при обработке поста", exc_info=e)
                 pass
         if latest_ts:
             self.timestamps[self.channel_name] = latest_ts
