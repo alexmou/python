@@ -110,8 +110,8 @@ class TelegramPrivateChannelParser:
             filename = f"/home/l_murygin/p8/qr_code.png"
             self.driver.save_screenshot(filename)
             print(f"[WARNING] Пользователь НЕ авторизован! QR-код сохранён в файл: {filename}")
-            self.close()
-            exit(1)
+            #self.close()
+            #exit(1)
 
     def scrape(self):
         self.driver.get(self.url)
