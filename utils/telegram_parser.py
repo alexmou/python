@@ -2,6 +2,8 @@ import os
 import json
 import time
 from datetime import datetime
+
+import pyperclip
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -9,7 +11,6 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.common.exceptions import StaleElementReferenceException, NoSuchElementException, TimeoutException
 from utils.driver_manager import TelegramDriverManager
 from utils.post_parser import Post
-from utils.log_config import logger
 
 class TelegramPrivateChannelParser:
     def __init__(self, channel_name: str, session_dir: str, timestamp_file: str):
@@ -19,11 +20,16 @@ class TelegramPrivateChannelParser:
         self.url = f"https://web.telegram.org/k/#@{channel_name}"
 
         self.driver = TelegramDriverManager(user_data_dir=session_dir).build_driver()
-        #self.driver = TelegramDriverManager(user_data_dir="/cookies").build_driver()
         self.timestamps = self._load_timestamps()
         self.user_cache = {}
         self.result = []
-        self.driver.save_screenshot(f"debug_link_error_{int(time.time())}.png")
+
+    def debug_screenshot(self, label: str):
+        ts = int(time.time())
+        filename = f"/home/l_murygin/p8/debug_{label}_{ts}.png"
+        self.driver.save_screenshot(filename)
+        print(f"[DEBUG] Saved screenshot {filename}")
+
     def _load_timestamps(self):
         if os.path.exists(self.timestamp_file):
             try:
@@ -46,8 +52,7 @@ class TelegramPrivateChannelParser:
                 t = post.get_timestamp(el)
                 if t > ts:
                     valid.append(el)
-            except Exception as e:
-                #logger.warning("[WARN] bad timestamp", exc_info=e)
+            except:
                 pass
         return valid
 
@@ -83,38 +88,35 @@ class TelegramPrivateChannelParser:
                     if "Copy Message Link" in label:
                         item.click()
                         time.sleep(1)
-                        import pyperclip
                         return pyperclip.paste()
-                except Exception:
+                except:
                     continue
 
         except (StaleElementReferenceException, NoSuchElementException, TimeoutException) as e:
-            #logger.warning("[get_post_link] menu fail", exc_info=e)
-            self.driver.save_screenshot(f"/home/l_murygin/p8/_{int(time.time())}.png")
+            print(f"[WARN] get_post_link menu fail: {e}")
+            self.debug_screenshot("error_get_link")
             pass
         return ""
 
     def scrape(self):
         self.driver.get(self.url)
-        self.driver.save_screenshot(f"/home/l_murygin/p8/_{int(time.time())}.png")
-        for _ in range(3):
-            try:
-                WebDriverWait(self.driver, 10).until(
-                    EC.presence_of_element_located((By.CLASS_NAME, "bubbles-group"))
-                    #logger.warning("[get_post_link] menu fail", exc_info=e)
 
-                )
-                self.driver.save_screenshot(f"/home/l_murygin/p8/_{int(time.time())}.png")
-                break
-            except:
-                time.sleep(5)
+        # Ждем полной загрузки интерфейса Telegram
+        try:
+            WebDriverWait(self.driver, 30).until(
+                EC.presence_of_element_located((By.CLASS_NAME, "tg_head"))
+            )
+        except TimeoutException:
+            print("[WARN] Telegram UI не загрузился")
+
+        self.debug_screenshot("after_tg_load")
 
         self._scroll_page()
 
         posts = self.driver.find_elements(By.CLASS_NAME, "bubble")
-        #logger.info(f"[INFO] Найдено {len(posts)} до филльтрации")
         filtered = self._filter_elements(posts)
-        #logger.info(f"[INFO] Найдено {len(filtered)} новых постов")
+
+        print(f"[INFO] Найдено {len(filtered)} новых постов")
 
         post_handler = Post()
         latest_ts = 0
@@ -125,19 +127,19 @@ class TelegramPrivateChannelParser:
                 time.sleep(0.4)
 
                 link = self.get_post_link(el)
-                #logger.debug(f"[DEBUG] link: {link}")
                 data = post_handler.to_dict(el, self.driver, self.url, self.user_cache)
                 data["message_link"] = link
-
-                #logger.debug(f"[POST] ID: {data.get('post_id')}, TS: {data.get('timestamp')}, LINK: {data['message_link']}")
 
                 if data["timestamp"] > latest_ts:
                     latest_ts = data["timestamp"]
                 self.result.append(data)
+
                 time.sleep(1.0)
             except Exception as e:
-                #logger.warning("[WARN] Ошибка при обработке поста", exc_info=e)
-                pass
+                print(f"[WARN] Ошибка при обработке поста: {e}")
+                self.debug_screenshot("post_parse_error")
+                continue
+
         if latest_ts:
             self.timestamps[self.channel_name] = latest_ts
             self._save_timestamps()
@@ -145,55 +147,23 @@ class TelegramPrivateChannelParser:
         return self.result
 
     def _scroll_page(self):
-        """Загрузка новых сообщений путем нажатия на кнопку"""
-        load_attempts = 0
-        max_attempts = 5  # Максимальное количество попыток загрузки
-        found_recent = False
+        last_height = -1
+        same_count = 0
+        max_retries = 30
 
-        while load_attempts < max_attempts:
-            try:
-                # Ищем кнопку загрузки новых сообщений
-                load_button = WebDriverWait(self.driver, 5).until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, ".bubbles-go-down"))
-                )
-
-                # Нажимаем на кнопку
-                self.driver.execute_script("arguments[0].click();", load_button)
-                load_attempts += 1
-                print(f"Нажатие на кнопку загрузки. Попытка: {load_attempts}/{max_attempts}")
-
-                # Ждем загрузки новых сообщений
-                time.sleep(2)
-
-                # Проверяем новые сообщения
-                messages = self.driver.find_elements(By.CSS_SELECTOR, ".bubble")
-                if messages:
-                    last_message = messages[-1]
-                    try:
-                        #timestamp = int(last_message.get_attribute("data-timestamp"))
-                        #post_date = datetime.fromtimestamp(timestamp).astimezone(self.timezone)
-                        #print(f"Последнее сообщение: {post_date}")
-
-                        # Прекращаем, если нашли сообщение новее start_date
-                        #if post_date >= self.start_date:
-                        found_recent = True
-                        # И прекращаем, если прошли нужную дату И уже нашли актуальные
-                        #elif post_date < self.start_date and found_recent:
-                        # print("Достигнуты сообщения старше start_date, завершаем загрузку")
-                        # break
-
-                    except Exception as e:
-                        print(f"Ошибка проверки даты: {e}")
-                        continue
-
-            except TimeoutException:
-                print("Кнопка загрузки не найдена, завершаем")
+        for _ in range(max_retries):
+            self.driver.execute_script("window.scrollTo(0, 0);")
+            time.sleep(3)
+            current_height = self.driver.execute_script("return document.body.scrollHeight")
+            if current_height == last_height:
+                same_count += 1
+            else:
+                same_count = 0
+            if same_count >= 5:
                 break
-            except Exception as e:
-                print(f"Ошибка при загрузке сообщений: {str(e)}")
-                break
-        self.driver.save_screenshot(f"/debug_link_error_{int(time.time())}.png")
-        print(f"Завершено после {load_attempts} попыток загрузки")
+            last_height = current_height
+
+        self.debug_screenshot("after_scroll")
 
     def save(self, filepath: str):
         with open(filepath, "w", encoding="utf-8") as f:
