@@ -2,7 +2,7 @@ import os
 import json
 import time
 from datetime import datetime
-
+import shutil
 import pyperclip
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -186,5 +186,15 @@ class TelegramPrivateChannelParser:
         with open(filepath, "w", encoding="utf-8") as f:
             json.dump(self.result, f, ensure_ascii=False, indent=2)
 
+
+
     def close(self):
-        self.driver.quit()
+        if self.driver:
+            try:
+                self.driver.quit()
+            except Exception:
+                pass
+        # Удаляем временную папку, если она была создана
+        if hasattr(self.driver, "temp_user_data_dir") and self.driver.temp_user_data_dir:
+            shutil.rmtree(self.driver.temp_user_data_dir, ignore_errors=True)
+
