@@ -15,8 +15,8 @@ def main():
     base_dir = os.path.dirname(os.path.abspath(__file__))
     session_dir = os.path.join(base_dir, "cookies")
     data_dir = os.path.join(base_dir, "data")
-    os.makedirs(session_dir, exist_ok=True)
-    os.makedirs(data_dir, exist_ok=True)
+    #os.makedirs(session_dir, exist_ok=True)
+    #os.makedirs(data_dir, exist_ok=True)
 
     timestamp_file = os.path.join(data_dir, "timestamps.json")
     output_file = os.path.join(data_dir, f"{channel}.json")

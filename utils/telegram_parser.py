@@ -18,12 +18,12 @@ class TelegramPrivateChannelParser:
         self.timestamp_file = timestamp_file
         self.url = f"https://web.telegram.org/k/#@{channel_name}"
 
-        #self.driver = TelegramDriverManager(user_data_dir=session_dir).build_driver()
-        self.driver = TelegramDriverManager(user_data_dir="/home/l_murygin/p8/cookies").build_driver()
+        self.driver = TelegramDriverManager(user_data_dir=session_dir).build_driver()
+        #self.driver = TelegramDriverManager(user_data_dir="/cookies").build_driver()
         self.timestamps = self._load_timestamps()
         self.user_cache = {}
         self.result = []
-
+        self.driver.save_screenshot(f"debug_link_error_{int(time.time())}.png")
     def _load_timestamps(self):
         if os.path.exists(self.timestamp_file):
             try:
