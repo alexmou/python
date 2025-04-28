@@ -18,7 +18,9 @@ class TelegramPrivateChannelParser:
         self.timestamp_file = timestamp_file
         self.url = f"https://web.telegram.org/k/#@{channel_name}"
 
-        self.driver = TelegramDriverManager(user_data_dir=session_dir).build_driver()
+        self.driver_manager = TelegramDriverManager(user_data_dir=session_dir)
+        self.driver = self.driver_manager.build_driver()
+
         self.timestamps = self._load_timestamps()
         self.user_cache = {}
         self.result = []
@@ -196,8 +198,10 @@ class TelegramPrivateChannelParser:
             json.dump(self.result, f, ensure_ascii=False, indent=2)
 
     def close(self):
-        self.driver.quit()
-        if hasattr(self.driver_manager, "cleanup"):
-             self.driver_manager.cleanup()
+        if self.driver:
+            self.driver.quit()
+        if hasattr(self, "driver_manager") and hasattr(self.driver_manager, "cleanup"):
+            self.driver_manager.cleanup()
+
 
 
