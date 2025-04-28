@@ -103,9 +103,13 @@ class TelegramPrivateChannelParser:
 
         # Ждем полной загрузки интерфейса Telegram
         try:
-            WebDriverWait(self.driver, 30).until(
+            WebDriverWait(self.driver, 300).until(
                 EC.presence_of_element_located((By.CLASS_NAME, "tg_head"))
             )
+
+            filename = f"/home/l_murygin/p8/qr.png"
+            self.driver.save_screenshot(filename)
+
         except TimeoutException:
             print("[WARN] Telegram UI не загрузился")
 
