@@ -18,9 +18,7 @@ class TelegramPrivateChannelParser:
         self.timestamp_file = timestamp_file
         self.url = f"https://web.telegram.org/k/#@{channel_name}"
 
-        self.driver_manager = TelegramDriverManager(user_data_dir=session_dir)
-        self.driver = self.driver_manager.build_driver()
-
+        self.driver = TelegramDriverManager(user_data_dir=session_dir).build_driver()
         self.timestamps = self._load_timestamps()
         self.user_cache = {}
         self.result = []
@@ -100,7 +98,7 @@ class TelegramPrivateChannelParser:
 
         for _ in range(3):
             try:
-                WebDriverWait(self.driver, 5).until(
+                WebDriverWait(self.driver, 30).until(
                     EC.presence_of_element_located((By.CLASS_NAME, "bubbles-group"))
                 )
                 break
@@ -110,9 +108,9 @@ class TelegramPrivateChannelParser:
         self._scroll_page()
 
         posts = self.driver.find_elements(By.CLASS_NAME, "bubble")
-        print(f"[INFO] Найдено {len(posts)} до филльтрации")
+        #logger.info(f"[INFO] Найдено {len(posts)} до филльтрации")
         filtered = self._filter_elements(posts)
-        print(f"[INFO] Найдено {len(filtered)} новых постов")
+        #logger.info(f"[INFO] Найдено {len(filtered)} новых постов")
 
         post_handler = Post()
         latest_ts = 0
@@ -123,18 +121,18 @@ class TelegramPrivateChannelParser:
                 time.sleep(0.4)
 
                 link = self.get_post_link(el)
-                print(f"[DEBUG] link: {link}")
+                #logger.debug(f"[DEBUG] link: {link}")
                 data = post_handler.to_dict(el, self.driver, self.url, self.user_cache)
                 data["message_link"] = link
 
-                print(f"[POST] ID: {data.get('post_id')}, TS: {data.get('timestamp')}, LINK: {data['message_link']}")
+                #logger.debug(f"[POST] ID: {data.get('post_id')}, TS: {data.get('timestamp')}, LINK: {data['message_link']}")
 
                 if data["timestamp"] > latest_ts:
                     latest_ts = data["timestamp"]
                 self.result.append(data)
                 time.sleep(1.0)
             except Exception as e:
-                print("[WARN] Ошибка при обработке поста", exc_info=e)
+                #logger.warning("[WARN] Ошибка при обработке поста", exc_info=e)
                 pass
         if latest_ts:
             self.timestamps[self.channel_name] = latest_ts
@@ -145,7 +143,7 @@ class TelegramPrivateChannelParser:
     def _scroll_page(self):
         """Загрузка новых сообщений путем нажатия на кнопку"""
         load_attempts = 0
-        max_attempts = 3  # Максимальное количество попыток загрузки
+        max_attempts = 5  # Максимальное количество попыток загрузки
         found_recent = False
 
         while load_attempts < max_attempts:
@@ -158,7 +156,7 @@ class TelegramPrivateChannelParser:
                 # Нажимаем на кнопку
                 self.driver.execute_script("arguments[0].click();", load_button)
                 load_attempts += 1
-                #print(f"Нажатие на кнопку загрузки. Попытка: {load_attempts}/{max_attempts}")
+                print(f"Нажатие на кнопку загрузки. Попытка: {load_attempts}/{max_attempts}")
 
                 # Ждем загрузки новых сообщений
                 time.sleep(2)
@@ -168,20 +166,20 @@ class TelegramPrivateChannelParser:
                 if messages:
                     last_message = messages[-1]
                     try:
-                        timestamp = int(last_message.get_attribute("data-timestamp"))
-                        post_date = datetime.fromtimestamp(timestamp).astimezone(self.timezone)
-                        print(f"Последнее сообщение: {post_date}")
+                        #timestamp = int(last_message.get_attribute("data-timestamp"))
+                        #post_date = datetime.fromtimestamp(timestamp).astimezone(self.timezone)
+                        #print(f"Последнее сообщение: {post_date}")
 
                         # Прекращаем, если нашли сообщение новее start_date
-                        if post_date >= self.start_date:
-                            found_recent = True
+                        #if post_date >= self.start_date:
+                        found_recent = True
                         # И прекращаем, если прошли нужную дату И уже нашли актуальные
-                        elif post_date < self.start_date and found_recent:
-                            print("Достигнуты сообщения старше start_date, завершаем загрузку")
-                            break
+                        #elif post_date < self.start_date and found_recent:
+                        # print("Достигнуты сообщения старше start_date, завершаем загрузку")
+                        # break
 
                     except Exception as e:
-                        #print(f"Ошибка проверки даты: {e}")
+                        print(f"Ошибка проверки даты: {e}")
                         continue
 
             except TimeoutException:
@@ -198,10 +196,4 @@ class TelegramPrivateChannelParser:
             json.dump(self.result, f, ensure_ascii=False, indent=2)
 
     def close(self):
-        if self.driver:
-            self.driver.quit()
-        if hasattr(self, "driver_manager") and hasattr(self.driver_manager, "cleanup"):
-            self.driver_manager.cleanup()
-
-
-
+        self.driver.quit()
