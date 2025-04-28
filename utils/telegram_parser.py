@@ -98,11 +98,12 @@ class TelegramPrivateChannelParser:
 
         for _ in range(3):
             try:
-                WebDriverWait(self.driver, 10).until(
+                WebDriverWait(self.driver, 30).until(
                     EC.presence_of_element_located((By.CLASS_NAME, "bubbles-group"))
                     #logger.warning("[get_post_link] menu fail", exc_info=e)
-                    self.driver.save_screenshot(f"/debug_link_error_{int(time.time())}.png")
+
                 )
+                self.driver.save_screenshot(f"/debug_link_error_{int(time.time())}.png")
                 break
             except:
                 time.sleep(5)
