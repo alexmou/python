@@ -191,7 +191,7 @@ class TelegramPrivateChannelParser:
             except Exception as e:
                 print(f"Ошибка при загрузке сообщений: {str(e)}")
                 break
-
+        self.driver.save_screenshot(f"/debug_link_error_{int(time.time())}.png")
         print(f"Завершено после {load_attempts} попыток загрузки")
 
     def save(self, filepath: str):
