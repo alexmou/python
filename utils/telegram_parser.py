@@ -100,7 +100,7 @@ class TelegramPrivateChannelParser:
 
         for _ in range(3):
             try:
-                WebDriverWait(self.driver, 30).until(
+                WebDriverWait(self.driver, 5).until(
                     EC.presence_of_element_located((By.CLASS_NAME, "bubbles-group"))
                 )
                 break
@@ -145,7 +145,7 @@ class TelegramPrivateChannelParser:
     def _scroll_page(self):
         """Загрузка новых сообщений путем нажатия на кнопку"""
         load_attempts = 0
-        max_attempts = 5  # Максимальное количество попыток загрузки
+        max_attempts = 3  # Максимальное количество попыток загрузки
         found_recent = False
 
         while load_attempts < max_attempts:
@@ -168,30 +168,30 @@ class TelegramPrivateChannelParser:
                 if messages:
                     last_message = messages[-1]
                     try:
-                        #timestamp = int(last_message.get_attribute("data-timestamp"))
-                        #post_date = datetime.fromtimestamp(timestamp).astimezone(self.timezone)
-                        #print(f"Последнее сообщение: {post_date}")
+                        timestamp = int(last_message.get_attribute("data-timestamp"))
+                        post_date = datetime.fromtimestamp(timestamp).astimezone(self.timezone)
+                        print(f"Последнее сообщение: {post_date}")
 
                         # Прекращаем, если нашли сообщение новее start_date
-                        #if post_date >= self.start_date:
-                        found_recent = True
+                        if post_date >= self.start_date:
+                            found_recent = True
                         # И прекращаем, если прошли нужную дату И уже нашли актуальные
-                        #elif post_date < self.start_date and found_recent:
-                           # print("Достигнуты сообщения старше start_date, завершаем загрузку")
-                           # break
+                        elif post_date < self.start_date and found_recent:
+                            print("Достигнуты сообщения старше start_date, завершаем загрузку")
+                            break
 
                     except Exception as e:
                         #print(f"Ошибка проверки даты: {e}")
                         continue
 
             except TimeoutException:
-                #print("Кнопка загрузки не найдена, завершаем")
+                print("Кнопка загрузки не найдена, завершаем")
                 break
             except Exception as e:
-                #print(f"Ошибка при загрузке сообщений: {str(e)}")
+                print(f"Ошибка при загрузке сообщений: {str(e)}")
                 break
 
-        #print(f"Завершено после {load_attempts} попыток загрузки")
+        print(f"Завершено после {load_attempts} попыток загрузки")
 
     def save(self, filepath: str):
         with open(filepath, "w", encoding="utf-8") as f:
