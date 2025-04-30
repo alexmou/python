@@ -2,8 +2,7 @@ import os
 import json
 import time
 from datetime import datetime
-import shutil
-import pyperclip
+
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -20,15 +19,30 @@ class TelegramPrivateChannelParser:
         self.url = f"https://web.telegram.org/k/#@{channel_name}"
 
         self.driver = TelegramDriverManager(user_data_dir=session_dir).build_driver()
+        self._check_login_or_exit()
+
         self.timestamps = self._load_timestamps()
         self.user_cache = {}
         self.result = []
 
-    def debug_screenshot(self, label: str):
-        ts = int(time.time())
-        filename = f"/home/l_murygin/p8/debug_{label}_{ts}.png"
-        self.driver.save_screenshot(filename)
-        print(f"[DEBUG] Saved screenshot {filename}")
+    def _check_login_or_exit(self):
+        self.driver.get("https://web.telegram.org/")
+        time.sleep(5)
+
+        # Ищем признак того, что мы не авторизованы (QR-код)
+        try:
+            WebDriverWait(self.driver, 10).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "div.qr-code"))
+            )
+            print("[ERROR] Требуется авторизация. Отсканируйте QR-код вручную.")
+            timestamp = int(time.time())
+            screenshot_path = f"/home/l_murygin/p8/qr_required_{timestamp}.png"
+            self.driver.save_screenshot(screenshot_path)
+            print(f"[INFO] Сохранён скриншот: {screenshot_path}")
+            self.driver.quit()
+            exit(1)
+        except TimeoutException:
+            print("[INFO] Авторизация прошла успешно (QR не найден). Продолжаем работу.")
 
     def _load_timestamps(self):
         if os.path.exists(self.timestamp_file):
@@ -88,48 +102,21 @@ class TelegramPrivateChannelParser:
                     if "Copy Message Link" in label:
                         item.click()
                         time.sleep(1)
+                        import pyperclip
                         return pyperclip.paste()
-                except:
+                except Exception:
                     continue
 
-        except (StaleElementReferenceException, NoSuchElementException, TimeoutException) as e:
-            print(f"[WARN] get_post_link menu fail: {e}")
-            self.debug_screenshot("error_get_link")
-            pass
+        except Exception:
+            timestamp = int(time.time())
+            self.driver.save_screenshot(f"/home/l_murygin/p8/debug_link_error_{timestamp}.png")
         return ""
-
-    def check_authorization_or_capture_qr(self):
-        """Проверяет, авторизован ли пользователь. Если нет, сохраняет скриншот QR-кода и завершает выполнение."""
-        try:
-            WebDriverWait(self.driver, 10).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, "div.tg_head"))
-            )
-            print("[INFO] Пользователь авторизован.")
-        except TimeoutException:
-            # Если шапка не найдена — скорее всего страница авторизации
-            filename = f"/home/l_murygin/p8/qr_code.png"
-            self.driver.save_screenshot(filename)
-            print(f"[WARNING] Пользователь НЕ авторизован! QR-код сохранён в файл: {filename}")
-            #self.close()
-            #exit(1)
 
     def scrape(self):
         self.driver.get(self.url)
-        self.check_authorization_or_capture_qr()
-        # Ждем полной загрузки интерфейса Telegram
-        try:
-            WebDriverWait(self.driver, 30).until(
-                EC.presence_of_element_located((By.CLASS_NAME, "tg_head"))
-            )
-
-
-        except TimeoutException:
-            print("[WARN] Telegram UI не загрузился")
-
-        self.debug_screenshot("after_tg_load")
+        time.sleep(5)
 
         self._scroll_page()
-
         posts = self.driver.find_elements(By.CLASS_NAME, "bubble")
         filtered = self._filter_elements(posts)
 
@@ -150,12 +137,9 @@ class TelegramPrivateChannelParser:
                 if data["timestamp"] > latest_ts:
                     latest_ts = data["timestamp"]
                 self.result.append(data)
-
                 time.sleep(1.0)
             except Exception as e:
-                print(f"[WARN] Ошибка при обработке поста: {e}")
-                self.debug_screenshot("post_parse_error")
-                continue
+                print("[WARN] Ошибка при обработке поста", e)
 
         if latest_ts:
             self.timestamps[self.channel_name] = latest_ts
@@ -180,21 +164,9 @@ class TelegramPrivateChannelParser:
                 break
             last_height = current_height
 
-        self.debug_screenshot("after_scroll")
-
     def save(self, filepath: str):
         with open(filepath, "w", encoding="utf-8") as f:
             json.dump(self.result, f, ensure_ascii=False, indent=2)
 
-
-
     def close(self):
-        if self.driver:
-            try:
-                self.driver.quit()
-            except Exception:
-                pass
-        # Удаляем временную папку, если она была создана
-        if hasattr(self.driver, "temp_user_data_dir") and self.driver.temp_user_data_dir:
-            shutil.rmtree(self.driver.temp_user_data_dir, ignore_errors=True)
-
+        self.driver.quit()
