@@ -56,6 +56,24 @@ python -m pip install -r requirements.txt
 
 3. Подготовьте директорию `cookies/` с данными профиля Chrome/Chromium, в которой уже выполнён вход в Telegram Web. По умолчанию проект копирует эту папку профиля и использует её для запуска браузера.
 
+## Quick Start / Быстрый старт
+
+Run only one command after installation:
+
+```bash
+python main.py nyachang_1
+```
+
+This will create `data/nyachang_1.json` and update `data/timestamps.json`.
+
+Запустите одну команду после установки:
+
+```bash
+python main.py nyachang_1
+```
+
+Это создаст `data/nyachang_1.json` и обновит `data/timestamps.json`.
+
 ## Usage / Использование
 
 Run the project from the repository root:
@@ -68,6 +86,14 @@ Where `<channel_name>` is the channel name without `@`, for example:
 
 ```bash
 python main.py nyachang_1
+```
+
+If you want to collect data from multiple channels, run the command for each channel one by one:
+
+```bash
+python main.py nyachang_1
+python main.py another_channel
+python main.py third_channel
 ```
 
 After execution:
@@ -85,6 +111,14 @@ python main.py <channel_name>
 
 ```bash
 python main.py nyachang_1
+```
+
+Если нужно собрать данные из нескольких каналов, запустите команду для каждого канала по очереди:
+
+```bash
+python main.py nyachang_1
+python main.py another_channel
+python main.py third_channel
 ```
 
 После выполнения:
